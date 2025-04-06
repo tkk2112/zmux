@@ -22,7 +22,6 @@ jobs:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5
         with:
           python-version: 3.11
-          enable-cache: true
       - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ~/.cache/pre-commit
@@ -47,17 +46,16 @@ jobs:
         if: steps.cache-zig.outputs.cache-hit != 'true'
         run: |
           set -eo pipefail
-          mkdir -p ~/zig
+          mkdir -p $HOME/zig
           curl -L ${{ env.ZIG_TARBALL }} -o $HOME/zig.tar.xz
           echo "${{ env.ZIG_SHASUM }} *$HOME/zig.tar.xz" | shasum -a 256 -c
           tar -xf $HOME/zig.tar.xz -C $HOME/zig --strip-components=1
           echo "Installed Zig ${{ env.ZIG_VERSION }}"
-          echo "$HOME/zig" >> $GITHUB_PATH
-
+      - run: echo "$HOME/zig" >> $GITHUB_PATH
       - run: uv run alias build
       - run: uv run alias test
 
-  test:
+  verify-matrix:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs: [test-matrix]
