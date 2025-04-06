@@ -1,0 +1,64 @@
+name: tests workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-matrix:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            zig-arch: "x86_64-linux"
+          - os: macos-latest
+            zig-arch: "aarch64-macos"
+    name: test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: 3.11
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-5|${{ hashFiles('pyproject.toml') }}|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: fetch zig version info
+        run: |
+            set -eo pipefail
+            ZIG_DOWNLOADS=$(curl -s https://ziglang.org/download/index.json)
+            echo "ZIG_VERSION=$(echo "$ZIG_DOWNLOADS" | jq -r '.master.version')" >> $GITHUB_ENV
+
+            ARCH="${{ matrix.zig-arch }}"
+            echo "ZIG_TARBALL=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].tarball')" >> $GITHUB_ENV
+            echo "ZIG_SHASUM=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].shasum')" >> $GITHUB_ENV
+
+      - id: cache-zig
+        uses: actions/cache@v4
+        with:
+          path: ~/zig
+          key: zig-${{ matrix.zig-arch }}-${{ env.ZIG_SHASUM }}
+
+      - name: install zig ${{ env.ZIG_VERSION }}
+        if: steps.cache-zig.outputs.cache-hit != 'true'
+        run: |
+          set -eo pipefail
+          mkdir -p $HOME/zig
+          curl -L ${{ env.ZIG_TARBALL }} -o $HOME/zig.tar.xz
+          echo "${{ env.ZIG_SHASUM }} *$HOME/zig.tar.xz" | shasum -a 256 -c
+          tar -xf $HOME/zig.tar.xz -C $HOME/zig --strip-components=1
+          echo "Installed Zig ${{ env.ZIG_VERSION }}"
+      - run: echo "$HOME/zig" >> $GITHUB_PATH
+      - run: uv run alias build
+      - run: uv run alias test
+
+  verify-matrix:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [test-matrix]
+    steps:
+      - run: exit 1
+        if: ${{ contains(toJSON(needs.*.result), 'failure') || contains(toJSON(needs.*.result), 'cancelled') }}

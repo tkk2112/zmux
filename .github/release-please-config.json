@@ -7,6 +7,7 @@
       "changelog-path": "CHANGELOG.md",
       "draft": false,
       "extra-files": [
+        "build.zig.zon",
         "README.md",
         {
           "jsonpath": "$.project.version",

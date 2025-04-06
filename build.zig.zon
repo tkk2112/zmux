@@ -1,0 +1,16 @@
+.{
+    .name = .zmux,
+    // x-release-please-start-version
+    .version = "0.0.1",
+    // x-release-please-end
+    .fingerprint = 0x695fb32a2e8e56a6,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+}
