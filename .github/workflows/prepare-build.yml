@@ -1,0 +1,67 @@
+name: prepare build
+
+on:
+  workflow_call:
+    inputs:
+      zig-arch:
+        required: false
+        default: 'x86_64-linux'
+        type: string
+        description: 'zig architecture (e.g., "x86_64-linux", "aarch64-macos")'
+      os:
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+        description: 'OS to run the job on (e.g., "ubuntu-latest", "macos-latest")'
+    outputs:
+      zig-version:
+        description: the installed zig version
+        value: ${{ jobs.setup.outputs.zig-version }}
+
+jobs:
+  setup:
+    runs-on: ${{ inputs.os }}
+    outputs:
+      zig-version: ${{ steps.zig-info.outputs.version }}
+
+    steps:
+      - name: fetch zig info
+        id: zig-info
+        run: |
+            set -eo pipefail
+            ZIG_DOWNLOADS=$(curl -s https://ziglang.org/download/index.json)
+            echo "ZIG_VERSION=$(echo "$ZIG_DOWNLOADS" | jq -r '.master.version')" >> $GITHUB_ENV
+
+            ARCH="${{ inputs.zig-arch }}"
+            echo "ZIG_TARBALL=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].tarball')" >> $GITHUB_ENV
+            echo "ZIG_SHASUM=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].shasum')" >> $GITHUB_ENV
+
+      - name: cache zig
+        id: cache-zig
+        uses: actions/cache@v4
+        with:
+          path: ~/zig
+          key: zig-${{ inputs.zig-arch }}-${{ env.ZIG_SHASUM }}
+
+      - name: install Zig ${{ steps.zig-info.outputs.version }}
+        if: steps.cache-zig.outputs.cache-hit != 'true'
+        run: |
+          set -eo pipefail
+          mkdir -p $HOME/zig
+          curl -L ${{ env.ZIG_TARBALL }} -o $HOME/zig.tar.xz
+          echo "${{ env.ZIG_SHASUM }} *$HOME/zig.tar.xz" | shasum -a 256 -c
+          tar -xf $HOME/zig.tar.xz -C $HOME/zig --strip-components=1
+          echo "Installed Zig ${{ env.ZIG_VERSION }}"
+
+      - name: setup zig
+        run: echo "$HOME/zig" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: 3.11
+          enable-cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-5|${{ hashFiles('pyproject.toml') }}|${{ hashFiles('.pre-commit-config.yaml') }}
