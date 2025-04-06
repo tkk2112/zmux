@@ -1,7 +1,7 @@
 .{
     .name = .zmux,
     // x-release-please-start-version
-    .version = "0.1.0",
+    .version = "0.2.0",
     // x-release-please-end
     .fingerprint = 0x695fb32a2e8e56a6,
     .minimum_zig_version = "0.14.0",
