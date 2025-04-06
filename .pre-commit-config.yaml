@@ -1,7 +1,7 @@
 default_install_hook_types:
   - pre-commit
   - commit-msg
-
+fail_fast: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -21,3 +21,27 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: [--strict, --force-scope, feat, fix, chore, test, ci, revert, test, refactor, build]
+  - repo: local
+    hooks:
+      - id: zigfmt
+        name: fix zig formatting
+        entry: zig fmt
+        language: system
+        types: [file]
+        files: '\.zig$'
+        stages: [pre-commit]
+      - id: zigbuild
+        name: check zig builds
+        entry: zig build
+        language: system
+        types: [file]
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: zigtest
+        name: check zig tests
+        entry: zig build --summary all test
+        language: system
+        types: [file]
+        pass_filenames: false
+        verbose: true
+        stages: [pre-commit]
