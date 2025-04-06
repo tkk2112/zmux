@@ -18,42 +18,11 @@ jobs:
     name: test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - name: setup zig
+      - uses: ./.github/workflows/prepare-build.yml
         with:
-          python-version: 3.11
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-5|${{ hashFiles('uv.lock') }}|${{ hashFiles('.pre-commit-config.yaml') }}
-      - name: fetch zig version info
-        run: |
-            set -eo pipefail
-            ZIG_DOWNLOADS=$(curl -s https://ziglang.org/download/index.json)
-            echo "ZIG_VERSION=$(echo "$ZIG_DOWNLOADS" | jq -r '.master.version')" >> $GITHUB_ENV
+          zig-arch: ${{ matrix.zig-arch }}
 
-            ARCH="${{ matrix.zig-arch }}"
-            echo "ZIG_TARBALL=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].tarball')" >> $GITHUB_ENV
-            echo "ZIG_SHASUM=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].shasum')" >> $GITHUB_ENV
-
-      - id: cache-zig
-        uses: actions/cache@v4
-        with:
-          path: ~/zig
-          key: zig-${{ matrix.zig-arch }}-${{ env.ZIG_SHASUM }}
-
-      - name: install zig ${{ env.ZIG_VERSION }}
-        if: steps.cache-zig.outputs.cache-hit != 'true'
-        run: |
-          set -eo pipefail
-          mkdir -p $HOME/zig
-          curl -L ${{ env.ZIG_TARBALL }} -o $HOME/zig.tar.xz
-          echo "${{ env.ZIG_SHASUM }} *$HOME/zig.tar.xz" | shasum -a 256 -c
-          tar -xf $HOME/zig.tar.xz -C $HOME/zig --strip-components=1
-          echo "Installed Zig ${{ env.ZIG_VERSION }}"
-      - run: echo "$HOME/zig" >> $GITHUB_PATH
       - run: uv run alias build
       - run: uv run alias test
 
