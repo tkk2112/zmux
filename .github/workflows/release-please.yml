@@ -27,8 +27,26 @@ jobs:
       - run: uv run alias release
         if: ${{ steps.release.outputs.release_created }}
 
-      - name: upload release artifact
+      - name: prepare release artifacts
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          mkdir -p artifacts
+          for dir in $GITHUB_WORKSPACE/zig-out/*/; do
+            if [ -d "$dir" ]; then
+              platform=$(basename "$dir")
+              echo "Creating artifact for $platform"
+              tar -czf artifacts/zmux-$platform.tar.gz -C "$dir" .
+            fi
+          done
+
+          ls -la artifacts/
+
+      - name: upload release artifacts
         if: ${{ steps.release.outputs.release_created }}
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-        run: gh release upload ${{ steps.release.outputs.tag_name }} $GITHUB_WORKSPACE/zig-out/* --clobber
+        run: |
+          for artifact in artifacts/*.tar.gz; do
+            echo "Uploading $artifact to release ${{ steps.release.outputs.tag_name }}"
+            gh release upload ${{ steps.release.outputs.tag_name }} "$artifact"
+          done
