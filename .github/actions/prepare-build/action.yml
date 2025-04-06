@@ -1,0 +1,62 @@
+name: prepare build
+description: set up zig and other build prerequisites
+inputs:
+  zig-arch:
+    description: zig architecture (e.g., "x86_64-linux", "aarch64-macos")
+    required: false
+    default: 'x86_64-linux'
+outputs:
+  zig-version:
+    description: the installed zig version
+    value: ${{ steps.zig-info.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: fetch zig info
+      id: zig-info
+      shell: bash
+      run: |
+        set -eo pipefail
+        ZIG_DOWNLOADS=$(curl -s https://ziglang.org/download/index.json)
+        ZIG_VERSION=$(echo "$ZIG_DOWNLOADS" | jq -r '.master.version')
+
+        ARCH="${{ inputs.zig-arch }}"
+        ZIG_TARBALL=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].tarball')
+        ZIG_SHASUM=$(echo "$ZIG_DOWNLOADS" | jq -r --arg arch "$ARCH" '.master[$arch].shasum')
+
+        echo "ZIG_TARBALL=${ZIG_TARBALL}" >> $GITHUB_ENV
+        echo "ZIG_SHASUM=${ZIG_SHASUM}" >> $GITHUB_ENV
+        echo "ZIG_VERSION=${ZIG_VERSION}" >> $GITHUB_ENV
+
+    - name: cache zig
+      id: cache-zig
+      uses: actions/cache@v4
+      with:
+        path: ~/zig
+        key: zig-${{ inputs.zig-arch }}-${{ env.ZIG_SHASUM }}
+
+    - name: install zig ${{ steps.zig-info.outputs.version }}
+      if: steps.cache-zig.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -eo pipefail
+        mkdir -p $HOME/zig
+        curl -L ${{ env.ZIG_TARBALL }} -o $HOME/zig.tar.xz
+        echo "${{ env.ZIG_SHASUM }} *$HOME/zig.tar.xz" | shasum -a 256 -c
+        tar -xf $HOME/zig.tar.xz -C $HOME/zig --strip-components=1
+        echo "installed zig ${{ env.ZIG_VERSION }}"
+
+    - name: setup zig
+      shell: bash
+      run: echo "$HOME/zig" >> $GITHUB_PATH
+
+    - uses: astral-sh/setup-uv@v5
+      with:
+        python-version: 3.11
+        enable-cache: true
+
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-5|${{ hashFiles('pyproject.toml') }}|${{ hashFiles('.pre-commit-config.yaml') }}

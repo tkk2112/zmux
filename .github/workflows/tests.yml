@@ -18,8 +18,8 @@ jobs:
     name: test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - name: setup zig
-      - uses: ./.github/workflows/prepare-build.yml
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/prepare-build
         with:
           zig-arch: ${{ matrix.zig-arch }}
 

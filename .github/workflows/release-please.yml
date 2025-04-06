@@ -20,11 +20,10 @@ jobs:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
-      - uses: ./.github/workflows/prepare-build.yml
+      - uses: actions/checkout@v4
         if: ${{ steps.release.outputs.release_created }}
-        with:
-          zig-arch: "x86_64-linux"
-
+      - uses: ./.github/actions/prepare-build
+        if: ${{ steps.release.outputs.release_created }}
       - run: uv run alias release
         if: ${{ steps.release.outputs.release_created }}
 
