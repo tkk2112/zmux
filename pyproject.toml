@@ -16,3 +16,9 @@ dev = [
 
 [tool.aliases]
 check = "uv run pre-commit run --all-files"
+build = "zig build --color auto --summary all"
+fuzz = "uv run alias build test --fuzz"
+release = "uv run alias build --release=safe release"
+run = "zig build run"
+test = "uv run alias build test"
+watch = "zig build run --watch"

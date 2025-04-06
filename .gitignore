@@ -1,3 +1,4 @@
 .venv
 .vscode
-uv.lock
+.zig-cache
+zig-out
