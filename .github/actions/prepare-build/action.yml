@@ -31,7 +31,7 @@ runs:
 
     - name: cache zig
       id: cache-zig
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
       with:
         path: ~/zig
         key: zig-${{ inputs.zig-arch }}-${{ env.ZIG_SHASUM }}
@@ -56,7 +56,7 @@ runs:
         python-version: 3.11
         enable-cache: true
 
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
       with:
         path: ~/.cache/pre-commit
         key: pre-commit-5|${{ hashFiles('pyproject.toml') }}|${{ hashFiles('.pre-commit-config.yaml') }}
